@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tä · Configurator Módulo·ä</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* tä paleta editorial (earthy, cálida, un solo acento) */
+  --ink:    #201D19;
+  --ink2:   #4A443C;
+  --ink3:   #8C8375;
+  --ink4:   #B8AFA0;
+  --line:   #E7E1D6;
+  --line2:  #F1ECE3;
+  --bg:     #FAF8F4;
+  --white:  #FFFFFF;
+  --accent: #4B7A5E;  /* verde bosque, único acento, uso moderado */
+  --clay:   #C98E4C;  /* terracota, detalle puntual (hover de precio, etc.) */
+
+  --radius:6px;
+  --radius-sm:4px;
+  --radius-pill:999px;
+  --panel-w:420px;
+
+  /* módulo base tä */
+  --mod-w: 375;  /* mm */
+  --mod-d: 375;  /* mm */
+  --mod-h: 390;  /* mm */
+  --t: 18;       /* mm espesor tablero */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--ink)}
+
+/* HEADER */
+header{
+  position:fixed;top:0;left:0;right:0;height:54px;
+  background:rgba(250,248,244,.93);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;z-index:100;
+}
+.logo-img{height:20px;width:auto;display:block}
+.header-center{
+  font-size:12px;color:var(--ink3);letter-spacing:.03em;
+  display:flex;align-items:center;gap:10px;
+}
+.header-center strong{color:var(--ink);font-weight:500}
+.header-right{display:flex;align-items:center;gap:10px}
+.lang-toggle{display:flex;gap:2px;background:var(--line2);border-radius:99px;padding:3px}
+.lang-btn,.cur-btn{font-size:11px;padding:4px 10px;border-radius:99px;border:none;background:transparent;cursor:pointer;color:var(--ink3);font-family:'DM Sans',sans-serif;font-weight:500;transition:all .15s}
+.lang-btn.active,.cur-btn.active{background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.09)}
+
+/* PALETTE TOGGLE */
+.palette-toggle{display:flex;gap:4px;align-items:center}
+.pal-btn{
+  width:20px;height:20px;border-radius:50%;border:2px solid transparent;
+  cursor:pointer;transition:all .15s;
+}
+.pal-btn.active{border-color:var(--ink);transform:scale(1.15)}
+
+/* LAYOUT */
+.app{display:flex;height:100vh;padding-top:54px}
+
+/* VIEWPORT */
+.viewport{flex:1;position:relative;overflow:hidden}
+#canvas3d{width:100%;height:100%;display:block;cursor:grab}
+#canvas3d:active{cursor:grabbing}
+
+/* VIEW CONTROLS */
+.view-btns{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:5px}
+.view-btn{
+  width:34px;height:34px;border-radius:var(--radius-sm);
+  background:rgba(250,248,244,.92);border:1px solid var(--line);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:500;color:var(--ink2);transition:all .15s;
+  font-family:'DM Sans',sans-serif;
+}
+.view-btn:hover{background:var(--white)}
+.view-btn.active{background:var(--ink);color:var(--white);border-color:var(--ink)}
+
+/* DIMENSION OVERLAY */
+.dim-overlay{
+  position:absolute;bottom:14px;right:14px;
+  background:rgba(250,248,244,.92);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:9px 13px;font-size:11px;
+  font-family:'DM Mono',monospace;color:var(--ink2);line-height:1.9;
+}
+.dim-lbl{font-size:9px;color:var(--ink4);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+
+/* MODULE COUNTER OVERLAY */
+.mod-overlay{
+  position:absolute;top:14px;left:14px;
+  background:rgba(250,248,244,.92);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:9px 13px;
+}
+.mod-count{font-size:22px;font-weight:500;color:var(--ink);font-family:'DM Mono',monospace;line-height:1}
+.mod-count-lbl{font-size:10px;color:var(--ink4);margin-top:2px;letter-spacing:.04em}
+
+/* HINT */
+.viewport-hint{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  background:rgba(17,24,39,.65);color:#fff;font-size:10px;
+  padding:5px 12px;border-radius:99px;pointer-events:none;opacity:.7;
+  letter-spacing:.04em;white-space:nowrap;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:var(--panel-w);min-width:var(--panel-w);
+  background:var(--white);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--line);flex-shrink:0;background:var(--bg)}
+.tab{
+  flex:1;padding:13px 6px;font-size:12px;font-weight:500;
+  border:none;background:transparent;cursor:pointer;
+  color:var(--ink3);border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:all .15s;font-family:'DM Sans',sans-serif;
+  letter-spacing:.03em;
+}
+.tab.active{color:var(--ink);border-bottom-color:var(--accent);background:var(--white)}
+
+/* PANELS */
+.tab-panel{display:none;flex:1;overflow-y:auto;padding:18px 20px 12px}
+.tab-panel.active{display:block}
+.tab-panel::-webkit-scrollbar{width:3px}
+.tab-panel::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+
+/* SECTION LABELS */
+.section-label{
+  font-size:10px;font-weight:500;text-transform:uppercase;
+  letter-spacing:.09em;color:var(--ink4);margin-bottom:10px;margin-top:16px;
+}
+.section-label:first-child{margin-top:0}
+
+/* PRODUCT HEADER */
+.product-header{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.product-eyebrow{font-size:10px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.product-name{font-size:20px;font-weight:400;color:var(--ink);letter-spacing:-.01em}
+.product-by{font-size:11px;color:var(--ink4);margin-top:3px;font-style:italic}
+.product-spec{
+  margin-top:8px;font-size:11px;color:var(--ink3);
+  font-family:'DM Mono',monospace;line-height:1.7;
+  background:var(--line2);border-radius:var(--radius-sm);
+  padding:8px 10px;
+}
+
+/* SLIDERS */
+.param-row{margin-bottom:12px}
+.param-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.param-name{font-size:12px;color:var(--ink2)}
+.param-value{font-size:12px;font-weight:500;color:var(--ink);font-family:'DM Mono',monospace}
+.param-unit{font-size:10px;color:var(--ink4);margin-left:2px}
+input[type=range]{
+  width:100%;height:3px;border-radius:2px;
+  -webkit-appearance:none;appearance:none;
+  background:var(--line);cursor:pointer;outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:15px;height:15px;
+  border-radius:50%;background:var(--ink);
+  border:2px solid var(--white);box-shadow:0 1px 4px rgba(0,0,0,.2);
+  cursor:pointer;transition:transform .1s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.range-limits{display:flex;justify-content:space-between;margin-top:3px}
+.range-limits span{font-size:9px;color:var(--ink4);font-family:'DM Mono',monospace}
+
+/* LAYOUT GRID for cols×rows */
+.layout-grid{
+  display:grid;gap:6px;margin-bottom:4px;
+}
+.layout-card{
+  cursor:pointer;border-radius:var(--radius-sm);
+  border:1.5px solid var(--line);padding:8px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:all .15s;background:var(--white);
+}
+.layout-card:hover{border-color:var(--ink4);transform:translateY(-1px)}
+.layout-card.selected{border-color:var(--accent);background:#EEF4F0}
+.layout-card svg{display:block}
+.layout-label{font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.02em;text-align:center}
+.layout-card.selected .layout-label{color:var(--accent)}
+
+/* MATERIAL PICKER */
+.material-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:4px}
+.mat-card{
+  cursor:pointer;border-radius:var(--radius-sm);overflow:hidden;
+  border:1.5px solid transparent;transition:all .15s;
+}
+.mat-card:hover{transform:translateY(-1px)}
+.mat-card.selected{border-color:var(--ink)}
+.mat-swatch{height:36px;width:100%;position:relative}
+.mat-name{font-size:9px;color:var(--ink2);text-align:center;padding:3px 2px;font-weight:500;line-height:1.2}
+
+/* FINISH / BACK CHIPS */
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px}
+.chip{
+  font-size:11px;padding:4px 9px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--line);color:var(--ink3);
+  background:transparent;transition:all .15s;font-family:'DM Sans',sans-serif;
+}
+.chip:hover{border-color:var(--ink3);color:var(--ink)}
+.chip.selected{background:var(--ink);color:var(--white);border-color:var(--ink)}
+
+@keyframes pop-select{0%{transform:scale(1)}45%{transform:scale(1.07)}100%{transform:scale(1)}}
+.pop-anim{animation:pop-select .28s cubic-bezier(.34,1.56,.64,1)}
+
+/* PRICE CARD */
+.price-card{
+  background:var(--line2);border-radius:var(--radius);
+  padding:14px;margin-top:4px;border:1px solid #E8E2DB;
+}
+.price-total{font-size:28px;font-weight:500;color:var(--ink);letter-spacing:-.02em;font-family:'DM Mono',monospace;line-height:1;transition:color .2s}
+.price-total.pulse{color:var(--accent)}
+.price-sub{font-size:11px;color:var(--ink3);margin-top:4px}
+.pb{margin-top:12px;border-top:1px solid #E8E2DB;padding-top:10px}
+.pb-row{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
+.pb-lbl{color:var(--ink3)}.pb-val{color:var(--ink2);font-family:'DM Mono',monospace;font-weight:500}
+.pb-row.tot .pb-lbl{font-weight:500;color:var(--ink);font-size:12px}
+.pb-row.tot .pb-val{font-size:12px;color:var(--ink)}
+.pb-hr{border:none;border-top:1px solid #E8E2DB;margin:5px 0}
+.pb-note{font-size:9px;color:var(--ink4);margin-top:8px;line-height:1.6}
+.maker-tag{
+  display:flex;align-items:flex-start;gap:7px;
+  background:#EEF7F3;border:1px solid #B7DFC9;
+  border-radius:var(--radius-sm);padding:7px 10px;margin-top:10px;
+}
+.maker-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:2px}
+.maker-txt{font-size:10px;color:#1A6645;line-height:1.5}
+
+/* BOM TABLE */
+.bom-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:6px}
+.bom-table th{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);color:var(--ink4);font-weight:500;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.bom-table td{padding:5px 6px;border-bottom:1px solid var(--line2);color:var(--ink2);font-family:'DM Mono',monospace}
+.bom-table tr:last-child td{border-bottom:none;font-weight:500;color:var(--ink)}
+
+/* PLANS */
+.plans-grid{display:flex;flex-direction:column;gap:10px}
+.plan-card{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.plan-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--line2);border-bottom:1px solid var(--line)}
+.plan-title{font-size:11px;font-weight:500;color:var(--ink2);font-family:'DM Mono',monospace}
+.plan-dims{font-size:9px;color:var(--ink4);font-family:'DM Mono',monospace}
+.plan-svg-wrap{padding:10px 14px;background:var(--white);display:flex;justify-content:center}
+
+/* ACTIONS */
+.actions-bar{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:6px;flex-shrink:0;background:var(--white)}
+.btn{flex:1;padding:11px;border-radius:var(--radius-pill);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:transform .15s,box-shadow .15s,background .15s,border-color .15s;border:none;letter-spacing:.02em;position:relative;overflow:hidden}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(.97)}
+.btn:disabled{transform:none;cursor:default}
+.btn .ripple-fx{position:absolute;border-radius:50%;background:rgba(255,255,255,.5);transform:scale(0);pointer-events:none;animation:btn-ripple .5s ease-out forwards}
+.btn-secondary .ripple-fx{background:rgba(32,29,25,.12)}
+@keyframes btn-ripple{to{transform:scale(2.4);opacity:0}}
+.btn-primary{background:var(--ink);color:var(--white);box-shadow:0 1px 2px rgba(32,29,25,.15)}
+.btn-primary:hover{background:#332E27;box-shadow:0 4px 14px rgba(32,29,25,.25)}
+.btn-secondary{background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
+.btn-secondary:hover{background:var(--line2);border-color:var(--ink3)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.5);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--white);border-radius:14px;padding:26px 28px;max-width:460px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.15);position:relative}
+.modal h2{font-size:17px;font-weight:500;color:var(--ink);margin-bottom:5px}
+.modal p{font-size:12px;color:var(--ink3);line-height:1.6;margin-bottom:14px}
+.modal input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:12px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none;margin-top:6px;background:var(--bg)}
+.modal input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:var(--line2);border:none;cursor:pointer;font-size:14px;color:var(--ink3);display:flex;align-items:center;justify-content:center}
+.cfg-summary{margin-top:12px;background:var(--line2);border-radius:var(--radius-sm);padding:10px 12px;font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;line-height:1.9}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--white);padding:9px 18px;border-radius:99px;font-size:11px;font-weight:500;z-index:300;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:820px){
+  :root{--panel-w:100vw}
+  .app{flex-direction:column}
+  .viewport{height:220px;flex:none}
+  .sidebar{width:100%;flex:1;min-width:unset;border-left:none;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="logo-img" src="data:image/png;base64,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" alt="tä" />
+  <div class="header-center">
+    <span data-i18n="header_product">Librero Módulo·ä</span>
+    <span>·</span>
+    <strong id="headerConfig">1×5 · 1 col</strong>
+  </div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button class="cur-btn active" data-cur="mxn" onclick="setCurrency('mxn')">MXN</button>
+      <button class="cur-btn" data-cur="usd" onclick="setCurrency('usd')">USD</button>
+    </div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('es')">ES</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <div class="viewport">
+    <canvas id="canvas3d"></canvas>
+    <div class="mod-overlay">
+      <div class="mod-count" id="modCount">5</div>
+      <div class="mod-count-lbl" data-i18n="mod_total">módulos totales</div>
+    </div>
+    <div class="view-btns">
+      <button class="view-btn active" id="vb3d"    onclick="setView('3d')"   >3D</button>
+      <button class="view-btn"        id="vbfront" onclick="setView('front')" data-i18n="view_front">FR</button>
+      <button class="view-btn"        id="vbside"  onclick="setView('side')"  data-i18n="view_side">SD</button>
+      <button class="view-btn"        id="vbtop"   onclick="setView('top')"   data-i18n="view_top">TP</button>
+    </div>
+    <div class="dim-overlay">
+      <div class="dim-lbl" data-i18n="dim_label">DIMENSIONES TOTALES</div>
+      <div id="dW">—</div><div id="dH">—</div><div id="dD">—</div>
+    </div>
+    <div class="viewport-hint" id="vpHint" data-i18n="hint">Drag to rotate · Scroll to zoom</div>
+  </div>
+
+  <div class="sidebar">
+    <div class="tabs">
+      <button class="tab active" id="tab-config" onclick="switchTab('config')" data-i18n="tab_config">Configurar</button>
+      <button class="tab"        id="tab-budget" onclick="switchTab('budget')" data-i18n="tab_budget">Presupuesto</button>
+      <button class="tab"        id="tab-plans"  onclick="switchTab('plans')"  data-i18n="tab_plans">Planos</button>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="tab-panel active" id="panel-config">
+      <div class="product-header">
+        <div class="product-eyebrow" data-i18n="product_eyebrow">Configurador</div>
+        <div class="product-name" data-i18n="product_name">Librero Módulo·ä</div>
+        <div class="product-by" data-i18n="product_by">Estudio Forma, Founding Designer</div>
+        <div class="product-spec" id="productSpec">
+          Módulo base: 375 × 375 × 390 mm · Tablero 18mm<br>
+          Sistema de ensamble por conectores CNC
+        </div>
+      </div>
+
+      <div class="section-label" data-i18n="sect_layout">Distribución de módulos</div>
+      <div class="layout-grid" style="grid-template-columns:repeat(4,1fr)" id="layoutGrid">
+        <!-- generados por JS -->
+      </div>
+
+      <div class="section-label" data-i18n="sect_cols">Columnas</div>
+      <div class="param-row">
+        <div class="param-header">
+          <span class="param-name" data-i18n="param_cols">Columnas</span>
+          <span class="param-value"><span id="v-cols">1</span></span>
+        </div>
+        <input type="range" id="sl-cols" min="1" max="4" value="1" step="1" oninput="update()">
+        <div class="range-limits"><span>1</span><span>4</span></div>
+      </div>
+
+      <div class="section-label" data-i18n="sect_rows">Filas por columna</div>
+      <div class="param-row">
+        <div class="param-header">
+          <span class="param-name" data-i18n="param_rows">Filas</span>
+          <span class="param-value"><span id="v-rows">5</span></span>
+        </div>
+        <input type="range" id="sl-rows" min="1" max="7" value="5" step="1" oninput="update()">
+        <div class="range-limits"><span>1</span><span>7</span></div>
+      </div>
+
+      <div class="section-label" data-i18n="sect_material">Material</div>
+      <div class="material-grid" id="matGrid">
+        <!-- JS generated -->
+      </div>
+
+      <div class="section-label" data-i18n="sect_finish">Acabado</div>
+      <div class="chips" id="finishChips">
+        <button class="chip selected" onclick="selChip(this,'finish','natural')" data-i18n="fin_natural">Aceite natural</button>
+        <button class="chip" onclick="selChip(this,'finish','wax')" data-i18n="fin_wax">Cera de abeja</button>
+        <button class="chip" onclick="selChip(this,'finish','lacquer')" data-i18n="fin_lacquer">Lacado mate</button>
+      </div>
+
+      <div class="section-label" data-i18n="sect_back">Panel trasero</div>
+      <div class="chips" id="backChips">
+        <button class="chip selected" onclick="selChip(this,'back','none')" data-i18n="back_none">Sin panel</button>
+        <button class="chip" onclick="selChip(this,'back','ply')" data-i18n="back_ply">Triplay 6mm</button>
+      </div>
+    </div>
+
+    <!-- BUDGET -->
+    <div class="tab-panel" id="panel-budget">
+      <div class="section-label" data-i18n="sect_estimate">Estimación</div>
+      <div class="price-card">
+        <div class="price-total" id="priceTotal">$0</div>
+        <div class="price-sub" id="priceSub">MXN · Fabricación local · Envío incluido</div>
+        <div class="pb">
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_mat">Material</span><span class="pb-val" id="pb-mat">—</span></div>
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_labor">Mano de obra</span><span class="pb-val" id="pb-labor">—</span></div>
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_cnc">Tiempo CNC</span><span class="pb-val" id="pb-cnc">—</span></div>
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_finish_cost">Acabado</span><span class="pb-val" id="pb-finish">—</span></div>
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_hw">Herrajes / conectores</span><span class="pb-val" id="pb-hw">—</span></div>
+          <hr class="pb-hr">
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_sub">Subtotal fabricación</span><span class="pb-val" id="pb-sub">—</span></div>
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_roy">Diseño · 8%</span><span class="pb-val" id="pb-roy">—</span></div>
+          <div class="pb-row"><span class="pb-lbl" data-i18n="pb_plat">Plataforma tä · 30%</span><span class="pb-val" id="pb-plat">—</span></div>
+          <hr class="pb-hr">
+          <div class="pb-row tot"><span class="pb-lbl" data-i18n="pb_total">Total cliente</span><span class="pb-val" id="pb-totalval">—</span></div>
+        </div>
+        <div class="maker-tag">
+          <div class="maker-dot"></div>
+          <div class="maker-txt" id="makerTxt">Maker asignado: Taller Cedros, Querétaro · 4.9★ · Entrega est. 4–5 semanas</div>
+        </div>
+        <div class="pb-note" id="pbNote">* Estimado. Cotización definitiva sujeta a revisión del Maker. Incluye IVA.</div>
+      </div>
+
+      <div class="section-label" style="margin-top:16px" data-i18n="sect_bom">Lista de materiales</div>
+      <table class="bom-table"><thead><tr>
+        <th data-i18n="bom_p">Pieza</th><th data-i18n="bom_q">Cant.</th>
+        <th data-i18n="bom_w">A(mm)</th><th data-i18n="bom_h">H(mm)</th><th data-i18n="bom_t">E(mm)</th>
+      </tr></thead><tbody id="bomBody"></tbody></table>
+    </div>
+
+    <!-- PLANS -->
+    <div class="tab-panel" id="panel-plans">
+      <div class="section-label" data-i18n="sect_plans">Planos de taller</div>
+      <p style="font-size:11px;color:var(--ink4);margin-bottom:12px;line-height:1.6" data-i18n="plans_desc">Generados automáticamente. Escala 1:10. Unidades en mm.</p>
+      <div class="plans-grid" id="plansGrid"></div>
+    </div>
+
+    <div class="actions-bar">
+      <button class="btn btn-secondary" onclick="shareConfig()">⎘ <span data-i18n="btn_share">Compartir</span></button>
+      <button class="btn btn-secondary" onclick="downloadPlans()">↓ <span data-i18n="btn_dl">Descargar</span></button>
+      <button class="btn btn-primary"   onclick="openModal()"><span data-i18n="btn_quote">Reservar / Comprar</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 data-i18n="modal_h">Reservar o comprar</h2>
+    <p data-i18n="modal_p">Puedes reservar con un depósito o pagar completo. Un Maker certificado te contactará en menos de 24 horas.</p>
+    <div><label style="font-size:11px;color:var(--ink3)" data-i18n="modal_name">Nombre</label><input id="mName" type="text"></div>
+    <div style="margin-top:8px"><label style="font-size:11px;color:var(--ink3)" data-i18n="modal_email">Correo</label><input id="mEmail" type="email"></div>
+    <div class="cfg-summary" id="cfgSummary"></div>
+    <div class="modal-actions" style="flex-direction:column;gap:8px">
+      <button class="btn btn-primary" style="width:100%" id="btnDeposit" onclick="startCheckout('deposit')">···</button>
+      <button class="btn btn-secondary" style="width:100%" id="btnFull" onclick="startCheckout('full')">···</button>
+      <button style="width:100%;background:transparent;border:none;color:var(--ink4);font-size:11px;cursor:pointer;padding:4px" onclick="submitQuote()" data-i18n="modal_quote_only">Solo quiero la cotización, sin pagar todavía</button>
+    </div>
+    <div style="margin-top:10px;text-align:center">
+      <button class="btn btn-secondary" style="flex:none;padding:7px 16px;font-size:11px" onclick="closeModal()" data-i18n="modal_cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONSTANTS: módulo base tä
+// ═══════════════════════════════════════════
+const MOD_W = 375   // mm
+const MOD_D = 375   // mm
+const MOD_H = 390   // mm
+const THICKNESS = 18 // mm tablero
+const CONNECTOR_W = 22 // mm conector lateral
+const CONNECTOR_H = 40
+const CONNECTOR_D = 20
+
+// tipo de cambio aproximado mxn→usd. ACTUALIZAR periódicamente
+// (o conectar a una api de tipo de cambio antes de producción).
+const MXN_PER_USD = 18.5
+
+// ═══════════════════════════════════════════
+// I18N
+// ═══════════════════════════════════════════
+const TX = {
+  es:{
+    tab_config:'Configurar',tab_budget:'Presupuesto',tab_plans:'Planos',
+    header_product:'Librero Módulo·ä',
+    product_eyebrow:'Configurador',
+    product_name:'Librero Módulo·ä',product_by:'Estudio Forma, Founding Designer',
+    mod_total:'módulos totales',dim_label:'DIMENSIONES TOTALES',
+    sect_layout:'Distribución',sect_cols:'Columnas',sect_rows:'Filas por columna',
+    sect_material:'Material',sect_finish:'Acabado',sect_back:'Panel trasero',
+    param_cols:'Columnas',param_rows:'Filas',
+    mat_pine:'Pino nat.',mat_walnut:'Nogal',mat_white:'Pino bco.',mat_ebony:'Eboniz.',mat_oak:'Roble',
+    fin_natural:'Aceite natural',fin_wax:'Cera de abeja',fin_lacquer:'Lacado mate',
+    back_none:'Sin panel',back_ply:'Triplay 6mm',
+    sect_estimate:'Estimación',
+    pb_mat:'Material',pb_labor:'Mano de obra',pb_cnc:'Tiempo CNC',
+    pb_finish_cost:'Acabado',pb_hw:'Herrajes / conectores',pb_sub:'Subtotal fabricación',
+    pb_roy:'Diseño · 8%',pb_plat:'Plataforma tä · 30%',pb_total:'Total cliente',
+    sect_bom:'Lista de materiales',
+    bom_p:'Pieza',bom_q:'Cant.',bom_w:'A(mm)',bom_h:'H(mm)',bom_t:'E(mm)',
+    sect_plans:'Planos de taller',
+    plans_desc:'Generados automáticamente. Escala 1:10. Unidades en mm.',
+    btn_share:'Compartir',btn_dl:'Descargar',btn_quote:'Reservar / Comprar',
+    modal_h:'Reservar o comprar',
+    modal_p:'Puedes reservar con un depósito o pagar completo. Un Maker certificado te contactará en menos de 24 horas.',
+    modal_name:'Nombre',modal_email:'Correo',modal_cancel:'Cancelar',modal_send:'Enviar',
+    modal_quote_only:'Solo quiero la cotización, sin pagar todavía',
+    price_sub:'Fabricación local · Envío incluido',
+    maker_txt:'Maker asignado: Taller Cedros, Querétaro · 4.9★ · Entrega est. 4–5 semanas',
+    pb_note:'* Estimado. Cotización definitiva sujeta a revisión del Maker. Incluye IVA.',
+    plan_lateral:'Panel lateral',plan_top:'Panel superior',plan_base:'Panel base',
+    plan_shelf:'Repisa interna',plan_back:'Panel trasero',
+    hint:'Arrastra para rotar · Scroll para zoom',
+    view_front:'FR',view_side:'LA',view_top:'SU',
+    toast_share:'Enlace copiado',toast_dl:'Descarga iniciada',toast_sent:'¡Solicitud enviada!',
+    col:'col',cols:'cols',row:'fila',rows:'filas',mods:'módulos',
+    summary:'Configuración',
+  },
+  en:{
+    tab_config:'Configure',tab_budget:'Budget',tab_plans:'Plans',
+    header_product:'Módulo·ä Shelf',
+    product_eyebrow:'Configurator',
+    product_name:'Módulo·ä Bookshelf',product_by:'Estudio Forma, Founding Designer',
+    mod_total:'total modules',dim_label:'TOTAL DIMENSIONS',
+    sect_layout:'Layout',sect_cols:'Columns',sect_rows:'Rows per column',
+    sect_material:'Material',sect_finish:'Finish',sect_back:'Back panel',
+    param_cols:'Columns',param_rows:'Rows',
+    mat_pine:'Pine nat.',mat_walnut:'Walnut',mat_white:'White pine',mat_ebony:'Ebonized',mat_oak:'Oak',
+    fin_natural:'Natural oil',fin_wax:'Beeswax',fin_lacquer:'Matte lacquer',
+    back_none:'No panel',back_ply:'6mm plywood',
+    sect_estimate:'Estimate',
+    pb_mat:'Material',pb_labor:'Labor',pb_cnc:'CNC time',
+    pb_finish_cost:'Finish',pb_hw:'Hardware / connectors',pb_sub:'Fabrication subtotal',
+    pb_roy:'Design fee · 8%',pb_plat:'tä platform · 30%',pb_total:'Customer total',
+    sect_bom:'Bill of materials',
+    bom_p:'Part',bom_q:'Qty.',bom_w:'W(mm)',bom_h:'H(mm)',bom_t:'T(mm)',
+    sect_plans:'Workshop plans',
+    plans_desc:'Auto-generated from your configuration. Scale 1:10. Units in mm.',
+    btn_share:'Share',btn_dl:'Download',btn_quote:'Reserve / Buy',
+    modal_h:'Reserve or buy',
+    modal_p:"You can reserve with a deposit or pay in full. A certified Maker will contact you within 24 hours.",
+    modal_name:'Name',modal_email:'Email',modal_cancel:'Cancel',modal_send:'Send',
+    modal_quote_only:'I just want the quote, no payment yet',
+    price_sub:'Local fabrication · Shipping included',
+    maker_txt:'Assigned maker: Taller Cedros, Querétaro · 4.9★ · Est. delivery 4–5 weeks',
+    pb_note:'* Estimated prices. Final quote confirmed by the Maker.',
+    plan_lateral:'Side panel',plan_top:'Top panel',plan_base:'Base panel',
+    plan_shelf:'Inner shelf',plan_back:'Back panel',
+    hint:'Drag to rotate · Scroll to zoom',
+    view_front:'FR',view_side:'SD',view_top:'TP',
+    toast_share:'Link copied',toast_dl:'Download started',toast_sent:'Request sent!',
+    col:'col',cols:'cols',row:'row',rows:'rows',mods:'modules',
+    summary:'Configuration',
+  }
+}
+let lang='en'
+const t = k => TX[lang][k] || TX.es[k] || k
+function setLang(l){
+  lang=l
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.textContent===l.toUpperCase()))
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n')
+    el.textContent=t(k)
+  })
+  buildLayoutGrid()
+  buildMatGrid()
+  update()
+}
+
+// ═══════════════════════════════════════════
+// CURRENCY
+// ═══════════════════════════════════════════
+let currency='mxn' // 'mxn' | 'usd': todos los precios internos se calculan en mxn y se convierten al mostrar
+function setCurrency(c){
+  currency=c
+  document.querySelectorAll('.cur-btn').forEach(b=>b.classList.toggle('active',b.dataset.cur===c))
+  updateBudget()
+}
+
+// ═══════════════════════════════════════════
+// PALETTE
+// ═══════════════════════════════════════════
+const PALETTES = {
+  earthy:{
+    ui_primary:'#201D19', ui_bg:'#FAF8F4', ui_line:'#E7E1D6', ui_accent:'#4B7A5E',
+    mat_pine:0xD7C4A3, mat_walnut:0x36322C, mat_white:0xF4F1EE, mat_ebony:0x2C2C2A, mat_oak:0xCAB79D,
+    mat_names:{pine:'Pino arena',walnut:'Tierra oscura',white:'Hueso',ebony:'Ebonizado',oak:'Roble tierno'},
+    connector:0xB8A88A,
+    floor:0xF0ECE3,
+    ambient:0.7, dir:0.85
+  }
+}
+let palette = PALETTES.earthy
+let currentPalette = 'earthy'
+
+function setPalette(p){
+  currentPalette=p
+  palette=PALETTES[p]
+  document.querySelectorAll('.pal-btn').forEach(b=>b.classList.toggle('active',b.id==='pal-'+p))
+  buildMatGrid()
+  buildScene()
+  update()
+}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let S={
+  cols:1, rows:5,
+  material:'pine',
+  finish:'natural', back:'none',
+  view:'3d'
+}
+
+// ═══════════════════════════════════════════
+// LAYOUT PRESETS
+// ═══════════════════════════════════════════
+// pequeño feedback visual al seleccionar (confirma el tap, no es decorativo)
+function popAnim(el){
+  el.classList.remove('pop-anim')
+  void el.offsetWidth // fuerza reflow para poder reiniciar la animación
+  el.classList.add('pop-anim')
+}
+
+function buildLayoutGrid(){
+  const grid=document.getElementById('layoutGrid')
+  grid.innerHTML=''
+  const presets=[
+    {cols:1,rows:3,label:'1×3'},{cols:1,rows:5,label:'1×5'},{cols:2,rows:4,label:'2×4'},{cols:2,rows:5,label:'2×5'},
+    {cols:3,rows:4,label:'3×4'},{cols:3,rows:5,label:'3×5'},{cols:4,rows:4,label:'4×4'},{cols:4,rows:5,label:'4×5'},
+  ]
+  presets.forEach(p=>{
+    const card=document.createElement('div')
+    card.className='layout-card'+(S.cols===p.cols&&S.rows===p.rows?' selected':'')
+    card.onclick=()=>{
+      S.cols=p.cols;S.rows=p.rows
+      document.getElementById('sl-cols').value=p.cols
+      document.getElementById('sl-rows').value=p.rows
+      document.querySelectorAll('.layout-card').forEach(c=>c.classList.remove('selected'))
+      card.classList.add('selected')
+      popAnim(card)
+      update()
+    }
+    const svgW=44,svgH=52
+    const cW=Math.floor((svgW-4)/p.cols)-1
+    const cH=Math.floor((svgH-4)/p.rows)-1
+    let rects=''
+    for(let c=0;c<p.cols;c++)for(let r=0;r<p.rows;r++){
+      const x=2+c*(cW+1),y=2+r*(cH+1)
+      rects+=`<rect x="${x}" y="${y}" width="${cW}" height="${cH}" rx="1" fill="${S.cols===p.cols&&S.rows===p.rows?palette.ui_accent:'#CBD5E1'}" opacity="0.7"/>`
+    }
+    card.innerHTML=`<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">${rects}</svg><div class="layout-label">${p.label}</div>`
+    grid.appendChild(card)
+  })
+}
+
+// ═══════════════════════════════════════════
+// MATERIAL GRID
+// ═══════════════════════════════════════════
+const MAT_KEYS=['pine','walnut','white','ebony','oak']
+function buildMatGrid(){
+  const g=document.getElementById('matGrid')
+  g.innerHTML=''
+  g.style.gridTemplateColumns='repeat(5,1fr)'
+  MAT_KEYS.forEach(k=>{
+    const card=document.createElement('div')
+    card.className='mat-card'+(S.material===k?' selected':'')
+    card.onclick=()=>{
+      S.material=k
+      document.querySelectorAll('.mat-card').forEach(c=>c.classList.remove('selected'))
+      card.classList.add('selected')
+      popAnim(card)
+      update()
+    }
+    const hex='#'+palette['mat_'+k].toString(16).padStart(6,'0')
+    const border=k==='white'?'border:1px solid var(--line)':''
+    card.innerHTML=`<div class="mat-swatch" style="background:${hex};${border}"></div><div class="mat-name">${t('mat_'+k)}</div>`
+    g.appendChild(card)
+  })
+}
+
+function selChip(btn,group,key){
+  const parent=btn.parentElement
+  parent.querySelectorAll('.chip').forEach(b=>b.classList.remove('selected'))
+  btn.classList.add('selected')
+  popAnim(btn)
+  S[group]=key
+  update()
+}
+
+// ═══════════════════════════════════════════
+// THREE.JS
+// ═══════════════════════════════════════════
+const canvas=document.getElementById('canvas3d')
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false})
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
+renderer.shadowMap.enabled=true
+renderer.shadowMap.type=THREE.PCFSoftShadowMap
+renderer.outputEncoding=THREE.sRGBEncoding
+
+const scene=new THREE.Scene()
+const camera=new THREE.PerspectiveCamera(32,1,0.01,200)
+
+let ambientLight, dirLight, fillLight, floorMesh
+function buildScene(){
+  scene.background=new THREE.Color(palette.ui_bg)
+  scene.fog=new THREE.Fog(new THREE.Color(palette.ui_bg),12,28)
+
+  if(ambientLight){scene.remove(ambientLight);scene.remove(dirLight);scene.remove(fillLight)}
+  ambientLight=new THREE.AmbientLight(0xfff8f0,palette.ambient);scene.add(ambientLight)
+  dirLight=new THREE.DirectionalLight(0xfffaf5,palette.dir)
+  dirLight.position.set(5,10,7);dirLight.castShadow=true
+  dirLight.shadow.mapSize.set(2048,2048)
+  dirLight.shadow.camera.near=0.5;dirLight.shadow.camera.far=50
+  dirLight.shadow.camera.left=-4;dirLight.shadow.camera.right=4
+  dirLight.shadow.camera.top=4;dirLight.shadow.camera.bottom=-4
+  scene.add(dirLight)
+  fillLight=new THREE.DirectionalLight(0xf0f8ff,0.25);fillLight.position.set(-4,3,-5);scene.add(fillLight)
+
+  if(floorMesh)scene.remove(floorMesh)
+  const fg=new THREE.PlaneGeometry(20,20)
+  const fm=new THREE.MeshStandardMaterial({color:new THREE.Color(palette.floor),roughness:0.95,metalness:0})
+  floorMesh=new THREE.Mesh(fg,fm);floorMesh.rotation.x=-Math.PI/2;floorMesh.receiveShadow=true;scene.add(floorMesh)
+}
+buildScene()
+
+// Orbit
+let isDragging=false,lx=0,ly=0
+let theta=0.55,phi=0.38,radius=4.5
+const target=new THREE.Vector3(0,0.5,0)
+function updateCam(){
+  camera.position.x=target.x+radius*Math.sin(phi)*Math.sin(theta)
+  camera.position.y=target.y+radius*Math.cos(phi)
+  camera.position.z=target.z+radius*Math.sin(phi)*Math.cos(theta)
+  camera.lookAt(target)
+}
+updateCam()
+canvas.addEventListener('mousedown',e=>{isDragging=true;lx=e.clientX;ly=e.clientY})
+window.addEventListener('mousemove',e=>{
+  if(!isDragging)return
+  theta+=(e.clientX-lx)*0.007;phi=Math.max(.08,Math.min(Math.PI-.08,phi+(e.clientY-ly)*0.007))
+  lx=e.clientX;ly=e.clientY;updateCam()
+})
+window.addEventListener('mouseup',()=>isDragging=false)
+canvas.addEventListener('wheel',e=>{radius=Math.max(.8,Math.min(12,radius+e.deltaY*.004));updateCam();e.preventDefault()},{passive:false})
+canvas.addEventListener('touchstart',e=>{isDragging=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY},{passive:true})
+window.addEventListener('touchmove',e=>{
+  if(!isDragging)return
+  theta+=(e.touches[0].clientX-lx)*0.009;phi=Math.max(.1,Math.min(Math.PI-.1,phi+(e.touches[0].clientY-ly)*0.009))
+  lx=e.touches[0].clientX;ly=e.touches[0].clientY;updateCam()
+},{passive:true})
+window.addEventListener('touchend',()=>isDragging=false)
+
+function setView(v){
+  S.view=v
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'))
+  document.getElementById('vb'+v).classList.add('active')
+  if(v==='front'){theta=0;phi=Math.PI/2.05;radius=4.5;target.set(0,.5,0)}
+  else if(v==='side'){theta=Math.PI/2;phi=Math.PI/2.05;radius=4.5;target.set(0,.5,0)}
+  else if(v==='top'){theta=.01;phi=.05;radius=5;target.set(0,.2,0)}
+  else{theta=.55;phi=.38;radius=4.5;target.set(0,.5,0)}
+  updateCam()
+}
+
+// Resize
+function resize(){
+  const vp=canvas.parentElement
+  renderer.setSize(vp.clientWidth,vp.clientHeight)
+  camera.aspect=vp.clientWidth/vp.clientHeight
+  camera.updateProjectionMatrix()
+}
+window.addEventListener('resize',resize);resize()
+
+function animate(){requestAnimationFrame(animate);renderer.render(scene,camera)}
+animate()
+
+// ═══════════════════════════════════════════
+// BUILD 3D SHELF: módulos cúbicos
+// ═══════════════════════════════════════════
+let shelfGroup=new THREE.Group()
+scene.add(shelfGroup)
+
+function buildShelf3D(){
+  // liberar geometrías y materiales del grupo anterior antes de descartarlo
+  // (evita fuga de memoria en la gpu cuando se arrastra el slider)
+  shelfGroup.traverse(obj=>{
+    if(obj.geometry)obj.geometry.dispose()
+    if(obj.material)obj.material.dispose()
+  })
+  scene.remove(shelfGroup)
+  shelfGroup=new THREE.Group()
+  scene.add(shelfGroup)
+
+  const cols=S.cols, rows=S.rows
+  const matColor=palette['mat_'+S.material]
+  const conColor=palette.connector
+
+  // Scale to meters for Three.js
+  const mW=MOD_W/1000, mH=MOD_H/1000, mD=MOD_D/1000
+  const T=THICKNESS/1000
+
+  const woodMat=new THREE.MeshStandardMaterial({color:matColor,roughness:0.72,metalness:0.0})
+  const darkWood=new THREE.MeshStandardMaterial({color:new THREE.Color(matColor).multiplyScalar(0.82),roughness:0.8})
+  const conMat=new THREE.MeshStandardMaterial({color:conColor,roughness:0.65,metalness:0.1})
+
+  function box(w,h,d,mat){return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat)}
+
+  function addMesh(mesh,x,y,z){
+    mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true
+    shelfGroup.add(mesh)
+    const edges=new THREE.LineSegments(
+      new THREE.EdgesGeometry(mesh.geometry,15),
+      new THREE.LineBasicMaterial({color:0x00000012})
+    )
+    edges.position.copy(mesh.position)
+    shelfGroup.add(edges)
+  }
+
+  // Total shelf dimensions
+  const totalW=cols*mW
+  const totalH=rows*mH
+
+  // Build each module
+  for(let c=0;c<cols;c++){
+    for(let r=0;r<rows;r++){
+      const ox=c*mW - totalW/2 + mW/2
+      const oy=r*mH + mH/2
+
+      // Left wall (only leftmost col has outer left; inner shared walls)
+      if(c===0){
+        addMesh(box(T,mH,mD,woodMat), ox-mW/2+T/2, oy, 0)
+      }
+      // Right wall always (outer right of each col; shared with next col's left)
+      addMesh(box(T,mH,mD,darkWood), ox+mW/2-T/2, oy, 0)
+
+      // Top panel (outer top / shared between rows)
+      if(r===rows-1){
+        addMesh(box(mW-T*(c===0?2:1),T,mD,woodMat), ox+(c>0?T/2:0), oy+mH/2-T/2, 0)
+      }
+      // Bottom / shared shelf
+      addMesh(box(mW-T*(c===0?2:1),T,mD,woodMat), ox+(c>0?T/2:0), oy-mH/2+T/2, 0)
+
+      // Back panel
+      if(S.back==='ply'){
+        const bMat=new THREE.MeshStandardMaterial({color:new THREE.Color(matColor).multiplyScalar(0.7),roughness:0.9})
+        addMesh(new THREE.Mesh(new THREE.BoxGeometry(mW-T*(c===0?2:1),mH-T*2,.006),bMat),
+          ox+(c>0?T/2:0), oy, -mD/2+.003)
+      }
+
+      // ── CONNECTORS (visible on sides, matching reference image) ──
+      const conW=CONNECTOR_W/1000, conH=CONNECTOR_H/1000, conD=CONNECTOR_D/1000
+      const positions=[0.18,0.82] // fractional height positions on wall
+      positions.forEach(frac=>{
+        const cy=oy - mH/2 + mH*frac
+        // Left-side connector knobs
+        if(c===0){
+          addMesh(new THREE.Mesh(new THREE.BoxGeometry(conD,conH,conW),conMat),
+            ox-mW/2-conD/2+.001, cy, 0)
+        }
+        // Right-side connector knobs
+        addMesh(new THREE.Mesh(new THREE.BoxGeometry(conD,conH,conW),conMat),
+          ox+mW/2+conD/2-.001, cy, 0)
+        // Top connector nubs (on top of topmost row)
+        if(r===rows-1){
+          addMesh(new THREE.Mesh(new THREE.BoxGeometry(conW,conD,conH),conMat),
+            ox, oy+mH/2+conD/2-.001, 0)
+        }
+        // Bottom connector nubs
+        if(r===0){
+          addMesh(new THREE.Mesh(new THREE.BoxGeometry(conW,conD,conH),conMat),
+            ox, oy-mH/2-conD/2+.001, 0)
+        }
+      })
+    }
+  }
+
+  // Adjust camera target to center of shelf
+  target.set(0, totalH/2, 0)
+  const maxDim=Math.max(totalW, totalH)
+  radius=maxDim*1.9+1.5
+  updateCam()
+
+  // Dimensions overlay
+  const tW=(cols*MOD_W/10).toFixed(0)
+  const tH=(rows*MOD_H/10).toFixed(0)
+  const tD=(MOD_D/10).toFixed(0)
+  const pre=lang==='es'
+  document.getElementById('dW').textContent=(pre?'Ancho: ':'Width: ')+tW+' cm'
+  document.getElementById('dH').textContent=(pre?'Alto: ':'Height: ')+tH+' cm'
+  document.getElementById('dD').textContent=(pre?'Prof: ':'Depth: ')+tD+' cm'
+  document.getElementById('modCount').textContent=cols*rows
+  document.getElementById('headerConfig').textContent=`${cols}×${rows} · ${cols*rows} ${t('mods')}`
+}
+
+// ═══════════════════════════════════════════
+// PRICING
+// ═══════════════════════════════════════════
+function calcPrice(){
+  const n=S.cols*S.rows
+
+  // el área de material se calcula a partir del mismo bom real (getBOMParts),
+  // así el precio y la lista de materiales siempre coinciden entre sí.
+  const parts=getBOMParts()
+  const totalM2=parts.reduce((sum,p)=>sum+(p.w/1000)*(p.h/1000)*p.qty,0) * 1.12 // +12% desperdicio de corte
+
+  const matPriceM2={pine:420,walnut:920,white:310,ebony:780,oak:680}[S.material]
+  const matCost=Math.round(totalM2*matPriceM2)
+  const laborCost=Math.round(480*n + n*120)
+  const cncCost=Math.round(280*n + 80)
+  const finishCost=Math.round({natural:90,wax:140,lacquer:260}[S.finish]*n)
+  const hwCost=Math.round(n*180 + (S.cols-1)*120) // conectores
+  const sub=matCost+laborCost+cncCost+finishCost+hwCost
+  const royalty=Math.round(sub*0.08)
+  const platform=Math.round(sub*0.30)
+  const total=sub+royalty+platform
+  return{matCost,laborCost,cncCost,finishCost,hwCost,sub,royalty,platform,total}
+}
+
+// n siempre llega en pesos (mxn); formatea en la moneda activa
+function fmx(n){
+  if(currency==='usd'){
+    return Math.round(n/MXN_PER_USD).toLocaleString('en-US')
+  }
+  return n.toLocaleString('es-MX')
+}
+function updateBudget(){
+  const p=calcPrice()
+  const priceEl=document.getElementById('priceTotal')
+  const newText='$'+fmx(p.total)
+  if(priceEl.textContent!==newText && priceEl.textContent!=='$0'){
+    priceEl.classList.remove('pulse'); void priceEl.offsetWidth; priceEl.classList.add('pulse')
+    setTimeout(()=>priceEl.classList.remove('pulse'),350)
+  }
+  priceEl.textContent=newText
+  document.getElementById('priceSub').textContent=currency.toUpperCase()+' · '+t('price_sub')
+  document.getElementById('pb-mat').textContent='$'+fmx(p.matCost)
+  document.getElementById('pb-labor').textContent='$'+fmx(p.laborCost)
+  document.getElementById('pb-cnc').textContent='$'+fmx(p.cncCost)
+  document.getElementById('pb-finish').textContent='$'+fmx(p.finishCost)
+  document.getElementById('pb-hw').textContent='$'+fmx(p.hwCost)
+  document.getElementById('pb-sub').textContent='$'+fmx(p.sub)
+  document.getElementById('pb-roy').textContent='$'+fmx(p.royalty)
+  document.getElementById('pb-plat').textContent='$'+fmx(p.platform)
+  document.getElementById('pb-totalval').textContent='$'+fmx(p.total)
+  document.getElementById('makerTxt').textContent=t('maker_txt')
+  document.getElementById('pbNote').textContent=t('pb_note')
+  updateBOM()
+}
+
+// ═══════════════════════════════════════════
+// BOM: fuente única de verdad para tabla y precio
+// ═══════════════════════════════════════════
+function getBOMParts(){
+  const {cols,rows}=S
+  const n=cols*rows
+  const innerW=MOD_W-THICKNESS*(cols>1?1:2)
+  const parts=[
+    {key:'lateral_ext',qty:2*rows,      w:MOD_D, h:MOD_H, thk:THICKNESS},
+  ]
+  if(cols>1){
+    parts.push({key:'lateral_int',qty:(cols-1)*rows,w:MOD_D,h:MOD_H,thk:THICKNESS})
+  }
+  parts.push(
+    {key:'base',qty:n,w:innerW,h:MOD_D,thk:THICKNESS},
+    {key:'top', qty:n,w:innerW,h:MOD_D,thk:THICKNESS},
+  )
+  if(S.back==='ply'){
+    parts.push({key:'back',qty:n,w:innerW,h:MOD_H-THICKNESS*2,thk:6})
+  }
+  return parts
+}
+
+const BOM_LABEL={
+  lateral_ext:()=>t('plan_lateral')+' ext.',
+  lateral_int:()=>t('plan_lateral')+' int.',
+  base:()=>t('plan_base'),
+  top:()=>t('plan_top'),
+  back:()=>t('plan_back'),
+}
+
+function updateBOM(){
+  const parts=getBOMParts()
+  const tbody=document.getElementById('bomBody')
+  tbody.innerHTML=''
+  parts.forEach(p=>{
+    const tr=document.createElement('tr')
+    tr.innerHTML=`<td>${BOM_LABEL[p.key]()}</td><td style="text-align:center">${p.qty}</td><td>${p.w}</td><td>${p.h}</td><td>${p.thk}</td>`
+    tbody.appendChild(tr)
+  })
+  const totRow=document.createElement('tr')
+  const totPanels=parts.reduce((a,b)=>a+b.qty,0)
+  totRow.innerHTML=`<td colspan="2">${lang==='es'?'Total piezas':'Total parts'}</td><td colspan="3">${totPanels} ${lang==='es'?'paneles':'panels'}</td>`
+  tbody.appendChild(totRow)
+}
+
+// ═══════════════════════════════════════════
+// SVG PLAN GENERATOR
+// ═══════════════════════════════════════════
+function makeSVG(wMM,hMM,label,fill='#D4A96A',qty=1){
+  const S2=0.32, pad=24
+  const sw=Math.round(wMM*S2), sh=Math.round(hMM*S2)
+  const tW=sw+pad*2, tH=sh+pad*2+18
+  const dk='#374151',dm='#9CA3AF',fl=fill,gr='#F3F4F6'
+  let s=`<svg width="${tW}" height="${tH}" viewBox="0 0 ${tW} ${tH}" xmlns="http://www.w3.org/2000/svg">`
+  s+=`<rect width="${tW}" height="${tH}" fill="white"/>`
+  // grid
+  for(let x=0;x<=sw;x+=Math.round(100*S2))s+=`<line x1="${pad+x}" y1="${pad}" x2="${pad+x}" y2="${pad+sh}" stroke="${gr}" stroke-width="0.5"/>`
+  for(let y=0;y<=sh;y+=Math.round(100*S2))s+=`<line x1="${pad}" y1="${pad+y}" x2="${pad+sw}" y2="${pad+y}" stroke="${gr}" stroke-width="0.5"/>`
+  // panel fill
+  s+=`<rect x="${pad}" y="${pad}" width="${sw}" height="${sh}" fill="${fl}" fill-opacity=".18" stroke="${dk}" stroke-width="1.5" rx="1"/>`
+  // grain
+  const gs=Math.max(10,Math.round(sh/6))
+  for(let y=gs;y<sh;y+=gs)s+=`<line x1="${pad+5}" y1="${pad+y}" x2="${pad+sw-5}" y2="${pad+y}" stroke="${dk}" stroke-width="0.5" stroke-dasharray="4 5" opacity=".35"/>`
+  // corners
+  ;[[pad,pad],[pad+sw,pad],[pad,pad+sh],[pad+sw,pad+sh]].forEach(([cx,cy])=>s+=`<circle cx="${cx}" cy="${cy}" r="2.5" fill="${dk}"/>`)
+  // center cross
+  s+=`<line x1="${pad+sw/2-6}" y1="${pad+sh/2}" x2="${pad+sw/2+6}" y2="${pad+sh/2}" stroke="${dk}" stroke-width="0.8" opacity=".4"/>`
+  s+=`<line x1="${pad+sw/2}" y1="${pad+sh/2-6}" x2="${pad+sw/2}" y2="${pad+sh/2+6}" stroke="${dk}" stroke-width="0.8" opacity=".4"/>`
+  // dims
+  const aw=pad,ay=pad+sh+10
+  s+=`<line x1="${aw}" y1="${ay}" x2="${aw+sw}" y2="${ay}" stroke="${dm}" stroke-width="1"/>`
+  s+=`<line x1="${aw}" y1="${ay-4}" x2="${aw}" y2="${ay+4}" stroke="${dm}" stroke-width="1"/>`
+  s+=`<line x1="${aw+sw}" y1="${ay-4}" x2="${aw+sw}" y2="${ay+4}" stroke="${dm}" stroke-width="1"/>`
+  s+=`<text x="${aw+sw/2}" y="${ay+10}" text-anchor="middle" font-size="8.5" fill="${dm}" font-family="DM Mono,monospace">${wMM} mm</text>`
+  const hx=pad-12,hy=pad
+  s+=`<line x1="${hx}" y1="${hy}" x2="${hx}" y2="${hy+sh}" stroke="${dm}" stroke-width="1"/>`
+  s+=`<line x1="${hx-4}" y1="${hy}" x2="${hx+4}" y2="${hy}" stroke="${dm}" stroke-width="1"/>`
+  s+=`<line x1="${hx-4}" y1="${hy+sh}" x2="${hx+4}" y2="${hy+sh}" stroke="${dm}" stroke-width="1"/>`
+  s+=`<text x="${hx-8}" y="${hy+sh/2}" text-anchor="middle" font-size="8.5" fill="${dm}" font-family="DM Mono,monospace" transform="rotate(-90 ${hx-8} ${hy+sh/2})">${hMM} mm</text>`
+  // label + qty
+  s+=`<text x="${tW/2}" y="${tH-3}" text-anchor="middle" font-size="9" fill="#6B7280" font-family="DM Sans,sans-serif">${label}${qty>1?' (×'+qty+')':''}</text>`
+  s+=`</svg>`
+  return s
+}
+
+function updatePlans(){
+  const {cols,rows}=S
+  const n=cols*rows
+  const innerW=MOD_W-THICKNESS*(cols>1?1:2)
+  const defs=[
+    {label:t('plan_lateral')+' ext.',  wMM:MOD_D, hMM:MOD_H, fill:'#C49A5C', qty:2*rows},
+    {label:t('plan_base'),             wMM:innerW,hMM:MOD_D,  fill:'#B88A4E', qty:n},
+    {label:t('plan_top'),              wMM:innerW,hMM:MOD_D,  fill:'#B88A4E', qty:n},
+  ]
+  if(cols>1)defs.splice(1,0,{label:t('plan_lateral')+' int.',wMM:MOD_D,hMM:MOD_H,fill:'#D4A96A',qty:(cols-1)*rows})
+  if(S.back==='ply')defs.push({label:t('plan_back'),wMM:innerW,hMM:MOD_H-THICKNESS*2,fill:'#8B6F52',qty:n})
+
+  const grid=document.getElementById('plansGrid')
+  grid.innerHTML=''
+  defs.forEach(d=>{
+    const card=document.createElement('div')
+    card.className='plan-card'
+    card.innerHTML=`<div class="plan-header"><div class="plan-title">${d.label}</div><div class="plan-dims">${d.wMM}×${d.hMM}×${THICKNESS} mm · ×${d.qty}</div></div><div class="plan-svg-wrap">${makeSVG(d.wMM,d.hMM,lang==='es'?'escala 1:10':'scale 1:10',d.fill,d.qty)}</div>`
+    grid.appendChild(card)
+  })
+}
+
+// ═══════════════════════════════════════════
+// MAIN UPDATE
+// ═══════════════════════════════════════════
+function update(){
+  S.cols=parseInt(document.getElementById('sl-cols').value)
+  S.rows=parseInt(document.getElementById('sl-rows').value)
+  document.getElementById('v-cols').textContent=S.cols
+  document.getElementById('v-rows').textContent=S.rows
+  buildLayoutGrid()
+  buildShelf3D()
+  updateBudget()
+  if(document.getElementById('panel-plans').classList.contains('active'))updatePlans()
+}
+
+// ═══════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'))
+  document.getElementById('tab-'+tab).classList.add('active')
+  document.getElementById('panel-'+tab).classList.add('active')
+  if(tab==='plans')updatePlans()
+}
+
+// ═══════════════════════════════════════════
+// SHARE / DOWNLOAD / MODAL
+// ═══════════════════════════════════════════
+function shareConfig(){
+  const url=location.href.split('?')[0]
+  const q=`?c=${S.cols}&r=${S.rows}&m=${S.material}&f=${S.finish}&b=${S.back}&l=${lang}`
+  if(navigator.clipboard){navigator.clipboard.writeText(url+q).then(()=>toast(t('toast_share')))}
+  else{const ta=document.createElement('textarea');ta.value=url+q;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast(t('toast_share'))}
+}
+
+function downloadPlans(){
+  updatePlans()
+  const p=calcPrice()
+  const matName=t('mat_'+S.material)
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>tä ${lang==='es'?'Planos':'Plans'} ${S.cols}×${S.rows}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>body{font-family:'DM Sans',sans-serif;padding:28px;color:#111;background:#fff;max-width:900px;margin:0 auto}
+h1{font-size:20px;font-weight:500;margin-bottom:3px}.sub{font-size:12px;color:#6B7280;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.pc{border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;break-inside:avoid}
+.ph{padding:7px 11px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;font-family:'DM Mono',monospace;font-size:10px;display:flex;justify-content:space-between}
+.pw{padding:10px;display:flex;justify-content:center}.pw svg{max-width:100%;height:auto}
+.bud{margin-top:24px;border:1px solid #E5E7EB;border-radius:8px;padding:18px}
+.bud h2{font-size:14px;font-weight:500;margin-bottom:10px}
+.br{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #F3F4F6;font-size:11px}
+.br.t{font-weight:500;font-size:12px;border-top:1px solid #E5E7EB;margin-top:4px;padding-top:6px}
+.footer{margin-top:18px;font-size:9px;color:#9CA3AF;text-align:center}
+@media print{@page{size:A4;margin:14mm}.grid{grid-template-columns:repeat(3,1fr)}}</style></head><body>
+<h1>tä Módulo·ä ${lang==='es'?'Planos de taller':'Workshop Plans'}</h1>
+<div class="sub">${S.cols}×${S.rows} · ${S.cols*S.rows} ${lang==='es'?'módulos':'modules'} · ${matName} · ${new Date().toLocaleDateString()}</div>
+<div class="grid">${document.getElementById('plansGrid').innerHTML.replace(/plan-card/g,'pc').replace(/plan-header/g,'ph').replace(/plan-title[^"]*"/g,'"').replace(/plan-dims/g,'').replace(/plan-svg-wrap/g,'pw')}</div>
+<div class="bud"><h2>${lang==='es'?'Presupuesto estimado':'Estimated budget'}</h2>
+<div class="br"><span>${lang==='es'?'Material':'Material'}</span><span>$${fmx(p.matCost)} ${currency.toUpperCase()}</span></div>
+<div class="br"><span>${lang==='es'?'Mano de obra':'Labor'}</span><span>$${fmx(p.laborCost)} ${currency.toUpperCase()}</span></div>
+<div class="br"><span>CNC</span><span>$${fmx(p.cncCost)} ${currency.toUpperCase()}</span></div>
+<div class="br"><span>${lang==='es'?'Acabado':'Finish'}</span><span>$${fmx(p.finishCost)} ${currency.toUpperCase()}</span></div>
+<div class="br"><span>${lang==='es'?'Herrajes':'Hardware'}</span><span>$${fmx(p.hwCost)} ${currency.toUpperCase()}</span></div>
+<div class="br t"><span>${lang==='es'?'Total':'Total'}</span><span>$${fmx(p.total)} ${currency.toUpperCase()}</span></div></div>
+<div class="footer">tä · Design global. Manufacture local. · ta.com</div>
+</body></html>`
+  const blob=new Blob([html],{type:'text/html'})
+  const a=document.createElement('a')
+  a.href=URL.createObjectURL(blob)
+  a.download=`ta-${S.cols}x${S.rows}-${S.material}.html`
+  a.click();toast(t('toast_dl'))
+}
+
+const DEPOSIT_PERCENT=0.3 // debe coincidir con DEPOSIT_PERCENT en pages/api/create-checkout-session.js
+
+function openModal(){
+  const p=calcPrice()
+  const matName=t('mat_'+S.material)
+  const cur=currency.toUpperCase()
+  const totalDisplay=fmx(p.total)
+  const depositDisplay=fmx(Math.round(p.total*DEPOSIT_PERCENT))
+  document.getElementById('cfgSummary').innerHTML=
+    `${S.cols}×${S.rows} · ${S.cols*S.rows} módulos · ${S.cols*MOD_W/10}×${S.rows*MOD_H/10} cm\n${matName} · ${t('fin_'+S.finish)}\n${t('summary')}: $${totalDisplay} ${cur}`
+  document.getElementById('btnDeposit').textContent=
+    (lang==='es'?`Reservar con depósito (${Math.round(DEPOSIT_PERCENT*100)}%) · $`:`Reserve with deposit (${Math.round(DEPOSIT_PERCENT*100)}%) · $`)+depositDisplay+' '+cur
+  document.getElementById('btnFull').textContent=
+    (lang==='es'?'Comprar completo · $':'Buy full price · $')+totalDisplay+' '+cur
+  document.getElementById('modal').classList.add('show')
+}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+
+// mode: 'deposit' | 'full'. crea la sesión de stripe checkout y redirige
+async function startCheckout(mode){
+  const name=document.getElementById('mName').value.trim()
+  const email=document.getElementById('mEmail').value.trim()
+  if(!name||!email){
+    toast(lang==='es'?'Falta tu nombre o correo':'Missing your name or email')
+    return
+  }
+  const p=calcPrice() // siempre calculado en mxn
+  const totalAmount = currency==='usd' ? Math.round(p.total/MXN_PER_USD) : p.total
+  const configSummary=`${S.cols}×${S.rows} · ${t('mat_'+S.material)} · ${t('fin_'+S.finish)}`
+
+  const btnId = mode==='deposit'?'btnDeposit':'btnFull'
+  const btn=document.getElementById(btnId)
+  const originalText=btn.textContent
+  btn.disabled=true
+  btn.textContent=lang==='es'?'Procesando…':'Processing…'
+
+  try{
+    const res=await fetch('/api/create-checkout-session',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        mode, currency, totalAmount,
+        config:{cols:S.cols,rows:S.rows,material:S.material,finish:S.finish,back:S.back},
+        customerName:name, customerEmail:email, configSummary
+      })
+    })
+    const data=await res.json()
+    if(res.ok && data.url){
+      // redirige la ventana completa (no solo el iframe) a stripe checkout
+      (window.top||window).location.href=data.url
+    }else{
+      toast(data.error||(lang==='es'?'Error al iniciar el pago':'Error starting payment'))
+      btn.disabled=false; btn.textContent=originalText
+    }
+  }catch(err){
+    toast(lang==='es'?'Error de conexión':'Connection error')
+    btn.disabled=false; btn.textContent=originalText
+  }
+}
+
+// pide cotización sin pagar, queda registrada como lead
+async function submitQuote(){
+  const name=document.getElementById('mName').value.trim()
+  const email=document.getElementById('mEmail').value.trim()
+  if(!name||!email){
+    toast(lang==='es'?'Falta tu nombre o correo':'Missing your name or email')
+    return
+  }
+  const p=calcPrice()
+  try{
+    await fetch('/api/lead',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name,email,
+        config:{cols:S.cols,rows:S.rows,material:S.material,finish:S.finish,back:S.back},
+        estimatedTotalMXN:p.total, currency
+      })
+    })
+  }catch(err){/* si falla el registro del lead, igual confirmamos al usuario */}
+  closeModal();toast(t('toast_sent'))
+}
+function toast(msg){
+  const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show')
+  setTimeout(()=>el.classList.remove('show'),2800)
+}
+
+// ═══════════════════════════════════════════
+// URL PARAMS
+// ═══════════════════════════════════════════
+function loadURL(){
+  const p=new URLSearchParams(location.search)
+  if(p.get('c'))document.getElementById('sl-cols').value=p.get('c')
+  if(p.get('r'))document.getElementById('sl-rows').value=p.get('r')
+  if(p.get('m'))S.material=p.get('m')
+  if(p.get('f'))S.finish=p.get('f')
+  if(p.get('b'))S.back=p.get('b')
+  if(p.get('l'))setLang(p.get('l'))
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+// feedback de click en botones .btn (confirma el tap con un ripple sutil)
+document.addEventListener('click', function(e){
+  const btn=e.target.closest('.btn')
+  if(!btn || btn.disabled) return
+  const rect=btn.getBoundingClientRect()
+  const size=Math.max(rect.width,rect.height)*1.3
+  const span=document.createElement('span')
+  span.className='ripple-fx'
+  span.style.width=span.style.height=size+'px'
+  span.style.left=(e.clientX-rect.left-size/2)+'px'
+  span.style.top=(e.clientY-rect.top-size/2)+'px'
+  btn.appendChild(span)
+  setTimeout(()=>span.remove(),550)
+})
+
+buildLayoutGrid()
+buildMatGrid()
+loadURL()
+document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.textContent===lang.toUpperCase()))
+document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=t(el.getAttribute('data-i18n')) })
+update()
+</script>
+</body>
+</html>
